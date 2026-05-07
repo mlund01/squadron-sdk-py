@@ -155,40 +155,37 @@ if __name__ == "__main__":
 ### Explicit `ToolGroup`
 
 Better when tools are a reusable unit (a library, a swappable bundle, or
-just clearly-bounded functionality):
+just clearly-bounded functionality). Tools in a group can read app-level
+state via `group.app`, which is set when you `include` the group:
 
 ```python
-# myplugin/tools/database.py
+# myplugin/tools/text.py
 from squadron_sdk import ToolGroup
 
-db = ToolGroup()
-_dsn = ""
+text_tools = ToolGroup()
 
-@db.configure
-def setup(settings):
-    global _dsn
-    _dsn = settings["dsn"]
-
-@db.tool
-async def query(sql: str) -> dict:
-    return await run(_dsn, sql)
+@text_tools.tool
+def shout(s: str) -> str:
+    return text_tools.app.prefix + s.upper()
 
 # myplugin/main.py
 from squadron_sdk import Squadron
-from myplugin.tools.database import db
+from myplugin.tools.text import text_tools
 
 app = Squadron()
-app.include(db)                  # merge tools and configure handlers
-app.include(db, prefix="db_")    # or namespace tools: db_query
+
+@app.configure
+def setup(settings):
+    app.prefix = settings.get("prefix", "")
+
+app.include(text_tools)              # text_tools.app is now `app`
+app.include(text_tools, prefix="t_") # or namespace: t_shout
 app.serve()
 ```
 
-`ToolGroup` has the same `@tool` and `@configure` decorators as `Squadron`
-(no `serve()`). Multiple `@configure` handlers are allowed; on host
-configure they all run in registration order. `app.include(group)` chains
-the group's handlers into the app, so groups can own their own state and
-bootstrap without reaching back to the app. Tool collisions raise on
-registration or `include`.
+`ToolGroup` is just a tool registry — same `@tool` decorator, no
+`@configure` or `.serve()`. Tool collisions raise on registration or
+`include`. A group can only be included into one app.
 
 ## Low-level API
 

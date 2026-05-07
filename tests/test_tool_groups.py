@@ -105,39 +105,40 @@ async def test_string_return_passes_through_unwrapped():
     assert item_info.output_schema["properties"]["count"]["type"] == "integer"
 
 
-async def test_group_configure_runs_via_app():
+async def test_group_tool_reads_app_state_via_back_reference():
     group = ToolGroup()
-    captured: dict[str, str] = {}
 
-    @group.configure
-    def setup(settings):
-        captured.update(settings)
-
-    app = Squadron()
-    app.include(group)
-
-    await app.as_provider().configure({"key": "value"})
-    assert captured == {"key": "value"}
-
-
-async def test_app_and_group_configures_both_run():
-    group = ToolGroup()
-    order: list[str] = []
-
-    @group.configure
-    def group_setup(_):
-        order.append("group")
+    @group.tool
+    def shout(s: str) -> str:
+        return group.app.prefix + s.upper()
 
     app = Squadron()
 
     @app.configure
-    def app_setup(_):
-        order.append("app")
+    def setup(settings):
+        app.prefix = settings.get("prefix", "")
 
     app.include(group)
 
-    await app.as_provider().configure({})
-    assert order == ["app", "group"]
+    provider = app.as_provider()
+    await provider.configure({"prefix": ">> "})
+    assert await provider.call("shout", json.dumps({"s": "hi"})) == ">> HI"
+
+
+def test_group_back_reference_set_on_include():
+    group = ToolGroup()
+    assert group.app is None
+
+    app = Squadron()
+    app.include(group)
+    assert group.app is app
+
+
+def test_group_cannot_be_included_in_two_apps():
+    group = ToolGroup()
+    Squadron().include(group)
+    with pytest.raises(ValueError, match="already been included"):
+        Squadron().include(group)
 
 
 def test_collision_within_group_raises():

@@ -6,21 +6,12 @@ from squadron_sdk import ToolGroup
 
 text_tools = ToolGroup()
 
-_separator = " "
-
-
-@text_tools.configure
-def setup(settings: dict[str, str]) -> None:
-    global _separator
-    _separator = settings.get("word_separator", " ")
-
 
 @text_tools.tool
 def reverse(s: str, mode: Literal["chars", "words"] = "chars") -> str:
-    """Reverse a string by characters or by words."""
-    if mode == "words":
-        return _separator.join(reversed(s.split()))
-    return s[::-1]
+    """Reverse a string by characters or by words. Honors the app's prefix."""
+    out = " ".join(reversed(s.split())) if mode == "words" else s[::-1]
+    return text_tools.app.prefix + out
 
 
 @text_tools.tool(name="count")

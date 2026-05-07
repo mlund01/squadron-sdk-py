@@ -41,7 +41,7 @@ async def test_decorator_plugin_roundtrip():
         assert json.loads(result) == {"letters": 16, "words": 4}
 
         result = await tool.call("reverse", json.dumps({"s": "hello world", "mode": "words"}))
-        assert result == "world hello"
+        assert result == "got: world hello"
 
         reverse_info = await tool.get_tool_info("reverse")
         assert reverse_info.output_schema == {"type": "string"}
