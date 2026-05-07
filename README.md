@@ -160,23 +160,35 @@ just clearly-bounded functionality):
 ```python
 # myplugin/tools/database.py
 from squadron_sdk import ToolGroup
+
 db = ToolGroup()
+_dsn = ""
+
+@db.configure
+def setup(settings):
+    global _dsn
+    _dsn = settings["dsn"]
 
 @db.tool
-async def query(sql: str) -> dict: ...
+async def query(sql: str) -> dict:
+    return await run(_dsn, sql)
 
 # myplugin/main.py
 from squadron_sdk import Squadron
 from myplugin.tools.database import db
 
 app = Squadron()
-app.include(db)                  # merge tools at the same name
-app.include(db, prefix="db_")    # or namespace them: db_query
+app.include(db)                  # merge tools and configure handlers
+app.include(db, prefix="db_")    # or namespace tools: db_query
 app.serve()
 ```
 
-`ToolGroup` is just a tool registry — same `@tool` decorator, no `configure`
-or `serve`. Tool collisions raise on registration / `include`.
+`ToolGroup` has the same `@tool` and `@configure` decorators as `Squadron`
+(no `serve()`). Multiple `@configure` handlers are allowed; on host
+configure they all run in registration order. `app.include(group)` chains
+the group's handlers into the app, so groups can own their own state and
+bootstrap without reaching back to the app. Tool collisions raise on
+registration or `include`.
 
 ## Low-level API
 

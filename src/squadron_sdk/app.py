@@ -121,6 +121,7 @@ def _resolve_return_type(fn: ToolFunc) -> tuple[Any, dict[str, Any] | None]:
 class _ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, _Tool] = {}
+        self._configure_handlers: list[ConfigureHandler] = []
 
     def tool(
         self,
@@ -142,16 +143,14 @@ class _ToolRegistry:
 
 
 class ToolGroup(_ToolRegistry):
-    pass
+    def configure(self, fn: ConfigureHandler) -> ConfigureHandler:
+        self._configure_handlers.append(fn)
+        return fn
 
 
 class Squadron(_ToolRegistry):
-    def __init__(self) -> None:
-        super().__init__()
-        self._configure_handler: ConfigureHandler | None = None
-
     def configure(self, fn: ConfigureHandler) -> ConfigureHandler:
-        self._configure_handler = fn
+        self._configure_handlers.append(fn)
         return fn
 
     def include(self, group: ToolGroup, *, prefix: str = "") -> None:
@@ -176,6 +175,7 @@ class Squadron(_ToolRegistry):
                 )
             else:
                 self._tools[full_name] = tool
+        self._configure_handlers.extend(group._configure_handlers)
 
     def as_provider(self) -> ToolProvider:
         return _SquadronProvider(self)
@@ -191,12 +191,10 @@ class _SquadronProvider(ToolProvider):
         self._app = app
 
     async def configure(self, settings: dict[str, str]) -> None:
-        handler = self._app._configure_handler
-        if handler is None:
-            return
-        result = handler(settings)
-        if inspect.isawaitable(result):
-            await result
+        for handler in self._app._configure_handlers:
+            result = handler(settings)
+            if inspect.isawaitable(result):
+                await result
 
     async def call(self, tool_name: str, payload: str) -> str:
         tool = self._app._tools.get(tool_name)

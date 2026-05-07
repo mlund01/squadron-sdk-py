@@ -105,6 +105,41 @@ async def test_string_return_passes_through_unwrapped():
     assert item_info.output_schema["properties"]["count"]["type"] == "integer"
 
 
+async def test_group_configure_runs_via_app():
+    group = ToolGroup()
+    captured: dict[str, str] = {}
+
+    @group.configure
+    def setup(settings):
+        captured.update(settings)
+
+    app = Squadron()
+    app.include(group)
+
+    await app.as_provider().configure({"key": "value"})
+    assert captured == {"key": "value"}
+
+
+async def test_app_and_group_configures_both_run():
+    group = ToolGroup()
+    order: list[str] = []
+
+    @group.configure
+    def group_setup(_):
+        order.append("group")
+
+    app = Squadron()
+
+    @app.configure
+    def app_setup(_):
+        order.append("app")
+
+    app.include(group)
+
+    await app.as_provider().configure({})
+    assert order == ["app", "group"]
+
+
 def test_collision_within_group_raises():
     group = ToolGroup()
 
