@@ -5,8 +5,15 @@ plugins. Wire-compatible with the Go
 [`squadron-sdk`](https://github.com/mlund01/squadron-sdk): a host built against
 either SDK can launch plugins built against either SDK, in either language.
 
-Built on [pyplugin](https://github.com/mlund01/py-plugin), the byte-for-byte
-Python port of HashiCorp's go-plugin (including AutoMTLS with ECDSA P-521).
+Built on [python-plugin](https://pypi.org/project/python-plugin/), the
+byte-for-byte Python port of HashiCorp's go-plugin (including AutoMTLS with
+ECDSA P-521).
+
+## Install
+
+```bash
+pip install squadron-sdk
+```
 
 ## Quick start
 
