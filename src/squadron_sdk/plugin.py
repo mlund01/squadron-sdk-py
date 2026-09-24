@@ -10,6 +10,7 @@ from pyplugin.broker import GRPCBroker
 
 from ._generated import plugin_grpc, plugin_pb2
 from .interface import ToolInfo, ToolProvider
+from .invocation import InvocationMetadata, _from_grpc_metadata, _reset_current, _set_current, _to_grpc_metadata
 
 
 def _info_to_proto(info: ToolInfo) -> plugin_pb2.ToolInfo:
@@ -18,6 +19,7 @@ def _info_to_proto(info: ToolInfo) -> plugin_pb2.ToolInfo:
         description=info.description,
         schema_json=json.dumps(info.schema or {}),
         output_schema_json=json.dumps(info.output_schema) if info.output_schema else "",
+        idempotent=info.idempotent,
     )
 
 
@@ -29,6 +31,7 @@ def _info_from_proto(t: plugin_pb2.ToolInfo) -> ToolInfo:
         description=t.description,
         schema=schema,
         output_schema=output_schema,
+        idempotent=t.idempotent,
     )
 
 
@@ -51,7 +54,11 @@ class _ToolPluginServicer(plugin_grpc.ToolPluginBase):
 
     async def Call(self, stream) -> None:
         request = await stream.recv_message()
-        result = await self._impl.call(request.tool_name, request.payload)
+        token = _set_current(_from_grpc_metadata(stream.metadata))
+        try:
+            result = await self._impl.call(request.tool_name, request.payload)
+        finally:
+            _reset_current(token)
         await stream.send_message(plugin_pb2.CallResponse(result=result))
 
     async def GetToolInfo(self, stream) -> None:
@@ -82,9 +89,16 @@ class ToolClient:
         if not resp.success:
             raise RuntimeError(f"configure failed: {resp.error}")
 
-    async def call(self, tool_name: str, payload: str) -> str:
+    async def call(
+        self,
+        tool_name: str,
+        payload: str,
+        *,
+        invocation: InvocationMetadata | None = None,
+    ) -> str:
         resp = await self._stub.Call(
-            plugin_pb2.CallRequest(tool_name=tool_name, payload=payload)
+            plugin_pb2.CallRequest(tool_name=tool_name, payload=payload),
+            metadata=_to_grpc_metadata(invocation) if invocation else None,
         )
         return resp.result
 

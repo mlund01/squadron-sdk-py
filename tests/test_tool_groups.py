@@ -28,6 +28,17 @@ def test_tool_group_collects_tools():
     assert sorted(group._tools.keys()) == ["reverse", "upper"]
 
 
+async def test_tool_can_declare_idempotency():
+    app = Squadron()
+
+    @app.tool(idempotent=True)
+    def lookup(key: str) -> str:
+        return key
+
+    info = await app.as_provider().get_tool_info("lookup")
+    assert info.idempotent is True
+
+
 async def test_app_include_merges_group():
     group = ToolGroup()
 

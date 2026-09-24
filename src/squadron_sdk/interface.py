@@ -13,6 +13,7 @@ class ToolInfo:
         default_factory=lambda: {"type": "object", "properties": {}}
     )
     output_schema: dict[str, Any] | None = None
+    idempotent: bool = False
 
 
 class ToolProvider(abc.ABC):

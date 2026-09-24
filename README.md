@@ -27,7 +27,7 @@ def setup(settings: dict[str, str]) -> None:
     app.prefix = settings.get("prefix", "")
 
 
-@app.tool
+@app.tool(idempotent=True)
 async def echo(
     message: str = Field(..., description="Text to echo back."),
     repeat: int = Field(1, ge=1, le=100),
@@ -110,6 +110,30 @@ another module also works if you prefer side-effect registration.
 Implement [`ToolProvider`](src/squadron_sdk/interface.py) directly when
 tools are fully dynamic (e.g. derived from a remote schema). `Squadron` is
 a thin layer over it.
+
+### Durable tool calls
+
+Mission tool calls carry a stable invocation identity outside the JSON payload.
+Plugins that perform side effects should use its idempotency key with the
+downstream system or their own result ledger:
+
+```python
+from squadron_sdk import current_invocation
+
+@app.tool
+async def create_record(name: str) -> dict:
+    invocation = current_invocation()
+    if invocation is None:
+        raise RuntimeError("durable invocation identity is required")
+    return await client.create_once(invocation.idempotency_key, name=name)
+```
+
+The identity also contains the run, task, task attempt, and provider tool-use
+ID. It is runtime metadata, not model-authored input, and remains stable when a
+mission is recovered.
+Declaring `idempotent=True` allows Squadron to replay an interrupted call with
+that same key. Use it only when the implementation or downstream API actually
+deduplicates the operation.
 
 ## Use the plugin with Squadron
 

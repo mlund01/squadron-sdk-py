@@ -73,6 +73,7 @@ def _build_tool(
     fn: ToolFunc,
     name: str | None,
     description: str | None,
+    idempotent: bool,
 ) -> _Tool:
     tool_name = name or fn.__name__
     doc = (inspect.getdoc(fn) or "").strip()
@@ -96,6 +97,7 @@ def _build_tool(
             description=tool_desc,
             schema=schema,
             output_schema=output_schema,
+            idempotent=idempotent,
         ),
     )
 
@@ -128,9 +130,10 @@ class _ToolRegistry:
         *,
         name: str | None = None,
         description: str | None = None,
+        idempotent: bool = False,
     ) -> ToolFunc:
         def decorator(f: ToolFunc) -> ToolFunc:
-            built = _build_tool(f, name, description)
+            built = _build_tool(f, name, description, idempotent)
             if built.name in self._tools:
                 raise ValueError(f"tool {built.name!r} is already registered")
             self._tools[built.name] = built
@@ -177,6 +180,7 @@ class Squadron(_ToolRegistry):
                         description=tool.description,
                         schema=tool.info.schema,
                         output_schema=tool.info.output_schema,
+                        idempotent=tool.info.idempotent,
                     ),
                 )
             else:

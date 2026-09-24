@@ -13,11 +13,13 @@ from __future__ import annotations
 from .app import Squadron, ToolGroup
 from .handshake import HANDSHAKE
 from .interface import ToolInfo, ToolProvider
+from .invocation import InvocationMetadata, current_invocation
 from .plugin import PLUGIN_KEY, ToolClient, ToolPlugin
 from .server import serve
 
 __all__ = [
     "HANDSHAKE",
+    "InvocationMetadata",
     "PLUGIN_KEY",
     "Squadron",
     "ToolClient",
@@ -25,5 +27,6 @@ __all__ = [
     "ToolInfo",
     "ToolPlugin",
     "ToolProvider",
+    "current_invocation",
     "serve",
 ]

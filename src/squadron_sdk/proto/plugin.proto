@@ -56,4 +56,5 @@ message ToolInfo {
     string description = 2;
     string schema_json = 3;
     string output_schema_json = 4;
+    bool idempotent = 5;
 }
